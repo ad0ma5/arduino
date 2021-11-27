@@ -9,10 +9,11 @@ int motor1Pin2 = 5;
 int motor2Pin1 = 4;
 int motor2Pin2 = 3;
 
-int ir1 = 26775;
-int ir2 = 10455;
-int ir3 = 30855;
-int ir4 = 28815;
+int ir1 = 26775;//left
+int ir2 = 10455;//down
+int ir3 = 30855;//right
+int ir4 = 28815;//up
+int ir5 = 18615;//stop
 
 IRrecv irrecv(RECV_PIN);     
 decode_results results;     
@@ -35,7 +36,27 @@ void loop()
     Serial.println(" ");     
     Serial.print("Code: [");     
     Serial.print(value); //prints the value a a button press     
-    Serial.println("] ");     
+    Serial.println("] "); 
+
+    if(ir4 == value){//up
+      digitalWrite(motor1Pin1, HIGH);
+      digitalWrite(motor2Pin2, HIGH);
+    }else if(ir2 == value){//down
+      digitalWrite(motor1Pin2, HIGH);
+      digitalWrite(motor2Pin1, HIGH);
+    }else if(ir3 == value){//right
+      digitalWrite(motor1Pin1, HIGH);
+      digitalWrite(motor2Pin1, HIGH);
+    }else if(ir1 == value){//left
+      digitalWrite(motor1Pin2, HIGH);
+      digitalWrite(motor2Pin2, HIGH);
+    }else if(ir5 == value){
+      digitalWrite(motor1Pin1, LOW);
+      digitalWrite(motor1Pin2, LOW);
+      digitalWrite(motor2Pin1, LOW);
+      digitalWrite(motor2Pin2, LOW);
+    }
+/*    
     if(ir1 == value){
       digitalWrite(motor1Pin1, HIGH);
     }
@@ -45,17 +66,20 @@ void loop()
       digitalWrite(motor2Pin1, HIGH);
     }else if(ir4 == value){
       digitalWrite(motor2Pin2, HIGH);
-    }else{
+    }else if(ir5 == value){
       digitalWrite(motor1Pin1, LOW);
       digitalWrite(motor1Pin2, LOW);
       digitalWrite(motor2Pin1, LOW);
       digitalWrite(motor2Pin2, LOW);
     }
+*/
+/*
     delay(500);
       digitalWrite(motor1Pin1, LOW);
       digitalWrite(motor1Pin2, LOW);
       digitalWrite(motor2Pin1, LOW);
       digitalWrite(motor2Pin2, LOW);
+*/
     irrecv.resume(); // Restart the ISR state machine and Receive the next value     
   }  
 }
