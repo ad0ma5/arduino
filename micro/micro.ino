@@ -47,11 +47,29 @@ Adafruit_SSD1306 display(OLED_RESET);
 #define NUMFLAKES 10
 #define XPOS 0
 #define YPOS 1
-#define DELTAY 2
+#define DELTAY 5
 
 
 #define LOGO16_GLCD_HEIGHT 16 
 #define LOGO16_GLCD_WIDTH  16 
+static const unsigned char PROGMEM logo16_glcd_bmp[] =
+{ B00000011, B11000000,
+  B00001100, B10110000,
+  B00010000, B10001000,
+  B00100001, B10000100,
+  B01000001, B01000010,
+  B01000010, B01000010,
+  B10000010, B00100001,
+  B10000100, B00100001,
+  B10000100, B00010001,
+  B10001000, B00010001,
+  B01010000, B00001010,
+  B01111111, B11111111,
+  B00100000, B00000100,
+  B01010000, B00001010,
+  B01001100, B00110010,
+  B10000011, B11000001 };
+/*
 static const unsigned char PROGMEM logo16_glcd_bmp[] =
 { B00000000, B11000000,
   B00000001, B11000000,
@@ -69,7 +87,7 @@ static const unsigned char PROGMEM logo16_glcd_bmp[] =
   B01111100, B11110000,
   B01110000, B01110000,
   B00000000, B00110000 };
-
+*/
 #if (SSD1306_LCDHEIGHT != 64)
 #error("Height incorrect, please fix Adafruit_SSD1306.h!");
 #endif
@@ -85,8 +103,9 @@ void setup()   {
   // Since the buffer is intialized with an Adafruit splashscreen
   // internally, this will display the splashscreen.
   display.display();
-  delay(2000);
+  delay(200);
 
+/*
   // Clear the buffer.
   display.clearDisplay();
 
@@ -98,7 +117,6 @@ void setup()   {
   display.display();
   delay(2000);
   display.clearDisplay();
-
   // draw many lines
   testdrawline();
   display.display();
@@ -181,8 +199,9 @@ void setup()   {
   display.invertDisplay(false);
   delay(1000); 
   display.clearDisplay();
-
+*/
   // draw a bitmap icon and 'animate' movement
+  display.clearDisplay();
   testdrawbitmap(logo16_glcd_bmp, LOGO16_GLCD_HEIGHT, LOGO16_GLCD_WIDTH);
 }
 
