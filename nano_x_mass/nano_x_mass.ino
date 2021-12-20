@@ -152,9 +152,9 @@ void setup()   {
 
   pinMode(5, OUTPUT);//speaker1
   pinMode(6, OUTPUT);//speaker2
-  printState();
+  printState("WILL CALIBRATE!");
   calibrate();
-  printState();
+  printState("INIT");
   playTune();
 }
 
@@ -177,30 +177,30 @@ void loop() {
 if(dt1 > 20 || dt2 > 20) {
   if( 
     dt1 > dt2
-    &&
-    LDR1 <  min1 //- (average1 - min1) 
-    ||
-    LDR1 >  max1 //- (average1 - max1) 
+    //&&
+    //LDR1 <  min1 //- (average1 - min1) 
+    //||
+    //LDR1 >  max1 //- (average1 - max1) 
   ){
     if(direction == 1) return;
     direction = 1;
-    status = "LDR1 <<<<<<<<";
-    printState();
+    status = "<<";
+    printState("LEFT!");
     tone(6, 880, 5); 
     digitalWrite(12, LOW);
     digitalWrite(11, HIGH);
   //}else if(oldLDR2 > LDR2 +50){
   }else if(
     dt1 < dt2
-    &&
-    LDR2 < min2 //- (average2 - min2) 
-    ||
-    LDR2 > max2 //- (average2 - max2) 
+    //&&
+    //LDR2 < min2 //- (average2 - min2) 
+    //||
+    //LDR2 > max2 //- (average2 - max2) 
   ){
     if(direction == -1) return;
     direction = -1;
-    status = "LDR2 >>>>>>>>";
-    printState();
+    status = ">>";
+    printState("RIGHT!");
     tone(6, 880, 5); 
     digitalWrite(11, LOW);
     digitalWrite(12, HIGH);
@@ -213,7 +213,7 @@ if(dt1 > 20 || dt2 > 20) {
     || 
     stepped == 1
   ){ 
-    printState();
+    printState("AWAIT");
   }
   
   if(direction != 0){
@@ -243,14 +243,15 @@ void calibrate(){
     max1 = LDR1 > max1 ? LDR1 : max1;
     max2 = LDR2 > max2 ? LDR2 : max2;
 
+    tone(6, 440*1, 5); 
     delay(200);
-    printState();
+    printState("Calibrate");
   }
   average1 = sum1/20;
   average2 = sum2/20;
 }
 
-void printState(){
+void printState(String title){
  //noTone(5);
  //tone(6, 880, 5); 
   //display.setTextSize(2);
@@ -261,29 +262,30 @@ void printState(){
   display.setTextSize(1);
   display.setCursor(0,0);
   display.setTextColor(WHITE);
+  display.print(title);
+  display.print(" status: ");
+  display.println(status);
+
   display.print("LDR1: ");
   //display.setTextColor(BLACK, WHITE); // 'inverted' text
-  display.println(LDR1);
+  display.print(LDR1);
   //display.setTextColor(WHITE);
-  display.print("LDR2: ");
+  display.print(" LDR2: ");
   //display.setTextColor(BLACK, WHITE); // 'inverted' text
   display.println(LDR2);
-
-  display.print("status: ");
-  display.println(status);
 
   display.print("steps: ");
   display.println(steps);
 
-  display.print(" min1: ");
-  display.print(min1);
-  display.print(" max1: ");
-  display.println(max1);
+  //display.print(" min1: ");
+  //display.print(min1);
+  //display.print(" max1: ");
+  //display.println(max1);
 
-  display.print(" min2: ");
-  display.print(min2);
-  display.print(" max2: ");
-  display.println(max2);
+  //display.print(" min2: ");
+  //display.print(min2);
+  //display.print(" max2: ");
+  //display.println(max2);
 
   display.print(" avr1: ");
   display.print(average1);
