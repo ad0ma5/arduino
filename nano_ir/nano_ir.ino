@@ -56,10 +56,10 @@ void loop()
     Serial.print("Code: [");     
     Serial.print(value); //prints the value a a button press     
     Serial.println("] "); 
-    Serial.print(stop); //prints the value a a button press     
-    Serial.println("] "); 
-    Serial.print(counter); //prints the value a a button press     
-    Serial.println("] "); 
+    //Serial.print(stop); //prints the value a a button press     
+    //Serial.println("] "); 
+    //Serial.print(counter); //prints the value a a button press     
+    //Serial.println("] "); 
     if(ir4 == value || ir6 == value){//up
       digitalWrite(motor1Pin1, HIGH);
       digitalWrite(motor2Pin2, HIGH);
@@ -83,23 +83,6 @@ void loop()
     //  counter = 251;
     }
 
-/*    
-    if(ir1 == value){
-      digitalWrite(motor1Pin1, HIGH);
-    }
-    else if(ir2 == value){
-      digitalWrite(motor1Pin2, HIGH);
-    }else if(ir3 == value){
-      digitalWrite(motor2Pin1, HIGH);
-    }else if(ir4 == value){
-      digitalWrite(motor2Pin2, HIGH);
-    }else if(ir5 == value){
-      digitalWrite(motor1Pin1, LOW);
-      digitalWrite(motor1Pin2, LOW);
-      digitalWrite(motor2Pin1, LOW);
-      digitalWrite(motor2Pin2, LOW);
-    }
-*/
 //*
 if(
   //( 
@@ -124,13 +107,19 @@ if(
 //      digitalWrite(motor2Pin1, LOW);
 //      digitalWrite(motor2Pin2, LOW);
   counter = 0;
+}else{
+  stop = 0;
 }
 //*/
     irrecv.resume(); // Restart the ISR state machine and Receive the next value     
   counter = 0;
   }else{
-     counter++;
-     if(stop == 1 && counter > 20000){
+     if(stop == 1){
+      counter++;
+    Serial.println(counter );     
+    //Serial.println( stop);     
+     }
+     if( counter > 25){
       stop = 0;
       counter = 0;
       digitalWrite(motor1Pin1, LOW);
@@ -141,6 +130,9 @@ if(
     Serial.println(" STOPPING ");     
     //Serial.print("Code: [");     
     //Serial.print(value); //prints the value a a button press     
+    }else{
+      //Serial.println(" GOING ");     
+
     }
   }//end else  
 }
