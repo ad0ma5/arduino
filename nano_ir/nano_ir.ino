@@ -21,6 +21,9 @@ int ir8 = 23205;//4
 int ir9 = 31365;//6
 int ir10 = -4081;//5
 
+int counter = 0; // delay counter
+int currentAction = 0;
+int stop = 0;
 
 IRrecv irrecv(RECV_PIN);     
 decode_results results;     
@@ -42,11 +45,21 @@ void loop()
   if (irrecv.decode(&results))// Returns 0 if no data ready, 1 if data ready.
   {     
     int value = results.value;// Results of decoding are stored in result.value     
+
+    if(value == -1){
+      value = currentAction;  
+    }else{
+      currentAction = value;
+    }
+
     Serial.println(" ");     
     Serial.print("Code: [");     
     Serial.print(value); //prints the value a a button press     
     Serial.println("] "); 
-
+    Serial.print(stop); //prints the value a a button press     
+    Serial.println("] "); 
+    Serial.print(counter); //prints the value a a button press     
+    Serial.println("] "); 
     if(ir4 == value || ir6 == value){//up
       digitalWrite(motor1Pin1, HIGH);
       digitalWrite(motor2Pin2, HIGH);
@@ -54,17 +67,22 @@ void loop()
       digitalWrite(motor1Pin2, HIGH);
       digitalWrite(motor2Pin1, HIGH);
     }else if(ir3 == value || ir9 == value){//right
-      digitalWrite(motor1Pin1, HIGH);
-      digitalWrite(motor2Pin1, HIGH);
-    }else if(ir1 == value || ir8 == value){//left
       digitalWrite(motor1Pin2, HIGH);
       digitalWrite(motor2Pin2, HIGH);
+    }else if(ir1 == value || ir8 == value){//left
+      digitalWrite(motor1Pin1, HIGH);
+      digitalWrite(motor2Pin1, HIGH);
     }else if(ir5 == value || ir10 == value){
       digitalWrite(motor1Pin1, LOW);
       digitalWrite(motor1Pin2, LOW);
       digitalWrite(motor2Pin1, LOW);
       digitalWrite(motor2Pin2, LOW);
+   // }else if(value == -1){
+    //}else if (currentAction == ) {
+    //  value = 0;
+    //  counter = 251;
     }
+
 /*    
     if(ir1 == value){
       digitalWrite(motor1Pin1, HIGH);
@@ -83,7 +101,8 @@ void loop()
     }
 */
 //*
-if( 
+if(
+  //( 
   value == ir4
   ||
   value == ir2
@@ -91,15 +110,37 @@ if(
   value == ir3
   ||
   value == ir1
-
+/*
+  value == 0
+*/
+  //)
+//  &&
+//  counter > 250
 ){ 
-    delay(200);
+  stop = 1;  
+  //delay(500);
+//      digitalWrite(motor1Pin1, LOW);
+//      digitalWrite(motor1Pin2, LOW);
+//      digitalWrite(motor2Pin1, LOW);
+//      digitalWrite(motor2Pin2, LOW);
+  counter = 0;
+}
+//*/
+    irrecv.resume(); // Restart the ISR state machine and Receive the next value     
+  counter = 0;
+  }else{
+     counter++;
+     if(stop == 1 && counter > 20000){
+      stop = 0;
+      counter = 0;
       digitalWrite(motor1Pin1, LOW);
       digitalWrite(motor1Pin2, LOW);
       digitalWrite(motor2Pin1, LOW);
       digitalWrite(motor2Pin2, LOW);
-}
-//*/
-    irrecv.resume(); // Restart the ISR state machine and Receive the next value     
-  }  
+
+    Serial.println(" STOPPING ");     
+    //Serial.print("Code: [");     
+    //Serial.print(value); //prints the value a a button press     
+    }
+  }//end else  
 }
