@@ -1,5 +1,6 @@
 #define COMPRESSOR 3
 #define RECORDER 12
+#define GUITAR 4
 // the setup function runs once when you press reset or power the board
 void setup() {
   // initialize digital pin LED_BUILTIN as an output.
@@ -7,14 +8,15 @@ void setup() {
   pinMode(COMPRESSOR, OUTPUT);
   pinMode(RECORDER, OUTPUT);
 
-	Serial.begin(9600);
+	//Serial.begin(9600);
+	Serial.begin(200000);
 	while (!Serial){
 				digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
 				delay(500);
 				digitalWrite(LED_BUILTIN, LOW);   // turn the LED on (HIGH is the voltage level)
 				delay(500);
 	}
-	Serial.println("on/off, rec/roff, com(1-3)/coff");
+	Serial.println("on/off, gon/goff, rec/roff, com(1-3)/coff");
 }
 String word_of_law = "";
 bool ser_read = false;
@@ -22,7 +24,7 @@ bool DEBUG = false;
 // the loop function runs over and over again forever
 void loop() {
   if(!ser_read && Serial.available() > 0){
-		if(DEBUG) Serial.println("on/off, rec/roff, com(1-3)/coff");
+		if(DEBUG) Serial.println("on/off, gon/goff, rec/roff, com(1-3)/coff");
 		ser_read = true;
 		String s = Serial.readStringUntil("\r");
 
@@ -33,6 +35,8 @@ void loop() {
 		if(s.equals("ping")) word_of_law = "ping";
 		if(s.equals("on")) word_of_law = "on";
 		if(s.equals("off")) word_of_law = "off";
+		if(s.equals("gon")) word_of_law = "gon";
+		if(s.equals("goff")) word_of_law = "goff";
 		if(s.equals("rec")) word_of_law = "rec";
 		if(s.equals("roff")) word_of_law = "roff";
 		if(s.equals("com3")) word_of_law = "com3";
@@ -54,6 +58,9 @@ void loop() {
 		if(word_of_law.equals("off")){
 			digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
 		}
+		if(word_of_law.equals("goff")){
+			digitalWrite(GUITAR, LOW);    // turn the LED off by making the voltage LOW
+		}
 		if(word_of_law.equals("roff")){
 			digitalWrite(RECORDER, LOW);   // turn the LED on (HIGH is the voltage level)
 		}
@@ -63,6 +70,11 @@ void loop() {
 		}
 		if(word_of_law.equals("on")){
 			digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+			//delay(100);                       // wait for a second
+			//delay(100);                       // wait for a second
+		}
+		if(word_of_law.equals("gon")){
+			digitalWrite(GUITAR, HIGH);   // turn the LED on (HIGH is the voltage level)
 			//delay(100);                       // wait for a second
 			//delay(100);                       // wait for a second
 		}
