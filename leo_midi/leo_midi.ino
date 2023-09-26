@@ -50,9 +50,10 @@ unsigned long timer[NPots] = {0}; // Stores the time that has elapsed since the 
 byte midiCh = 1; //* MIDI channel to be used
 byte note = 60; //* Lowest note to be used; 36 = C2; 60 = Middle C
 byte cc = 1; //* Lowest MIDI CC to be used
-bool toned = false;
+bool toned = true;
 bool connected = false;
 
+int startPress13 = 0;
 // SETUP
 void setup() {
 
@@ -96,11 +97,15 @@ void buttons() {
         lastDebounceTime[i] = millis();
 
         if (buttonCState[i] == LOW) {
-
+          if(buttonPin[i] == 13 && startPress13 == 0){
+						//toned = !toned;
+						startPress13 = millis();
+						//tone(speakerPin, 880, 500);
+					}
 					//if(connected){
 					//}else{
-	          //if(!toned) 
-              tone(speakerPin, speakerNotes[i], 10);
+	          if(toned) 
+              tone(speakerPin, speakerNotes[i], 5);
             //toned = true;
 					//}
           // Sends the MIDI note ON 
@@ -122,12 +127,20 @@ void buttons() {
           noteOn(midiCh, note + i, 0);  // channel, note, velocity
           MidiUSB.flush();
           
+          if(buttonPin[i] == 13){
+						startPress13 = 0;
+						//toned = false;
+					}
 
 
         }
         buttonPState[i] = buttonCState[i];
-				//if(toned){
-				//}
+				if(startPress13 != 0 && millis() - startPress13 > 10000){
+          tone(speakerPin, 880, 1000);
+					delay(1000);
+					toned = !toned;
+					startPress13 = 0;
+				}
       }
     }
   }
