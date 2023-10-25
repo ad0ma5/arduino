@@ -17,7 +17,9 @@
 // BUTTONS
 const int NButtons = 19; //***  total number of buttons
 const int buttonPin[NButtons] = {0,1,2,4,5, 6,7,8,9,10, 11,12,13,A0,A1, A2,A3,A4,A5}; //*** define Digital Pins connected from Buttons to Arduino; (ie {10, 16, 14, 15, 6, 7, 8, 9, 2, 3, 4, 5}; 12 buttons)
-const int speakerPin = 3;                                            
+const int speakerPin = 3;    
+//const int sliderIn = A5;
+                                        
 const int speakerNotes[NButtons] = {440,466,494,523,554, 587,622,659,698,740, 784,831,880,932,988, 1047,1109,1175,1245};
 int buttonCState[NButtons] = {};        // stores the button current value
 int buttonPState[NButtons] = {};        // stores the button previous value
@@ -50,8 +52,8 @@ unsigned long timer[NPots] = {0}; // Stores the time that has elapsed since the 
 byte midiCh = 1; //* MIDI channel to be used
 byte note = 60; //* Lowest note to be used; 36 = C2; 60 = Middle C
 byte cc = 1; //* Lowest MIDI CC to be used
-bool toned = true;
-bool connected = false;
+int toned = 1;
+//bool connected = false;
 
 int startPress13 = 0;
 // SETUP
@@ -97,15 +99,17 @@ void buttons() {
         lastDebounceTime[i] = millis();
 
         if (buttonCState[i] == LOW) {
-          if(buttonPin[i] == 13 && startPress13 == 0){
+          if(buttonPin[i] == 13){
 						//toned = !toned;
 						startPress13 = millis();
 						//tone(speakerPin, 880, 500);
 					}
 					//if(connected){
 					//}else{
-	          if(toned) 
-              tone(speakerPin, speakerNotes[i], 5);
+	          if(toned == 1) 
+              tone(speakerPin, speakerNotes[i], 3);
+	          if(toned == 2) 
+              tone(speakerPin, speakerNotes[i]);
             //toned = true;
 					//}
           // Sends the MIDI note ON 
@@ -121,28 +125,38 @@ void buttons() {
  					//toned = false;
 				    //noTone(speakerPin);
 					//}
+	        if(toned == 2) 
+              noTone(speakerPin);
+          if(buttonPin[i] == 13){
+              //tone(speakerPin, speakerNotes[i], millis() - startPress13);
+						startPress13 = 0;
+						//toned = false;
+					}
           // Sends the MIDI note OFF accordingly to the chosen board
 
           // use if using with ATmega32U4 (micro, pro micro, leonardo...)
           noteOn(midiCh, note + i, 0);  // channel, note, velocity
           MidiUSB.flush();
           
-          if(buttonPin[i] == 13){
-						startPress13 = 0;
-						//toned = false;
-					}
 
 
         }
         buttonPState[i] = buttonCState[i];
-				if(startPress13 != 0 && millis() - startPress13 > 10000){
-          tone(speakerPin, 880, 1000);
-					delay(1000);
-					toned = !toned;
-					startPress13 = 0;
-				}
+				//if(millis() - startPress13 > 2500) startPress13 = 0;
       }
     }
+				if(buttonPin[i] == 13 && startPress13 >= 1){
+          int dt = millis() - startPress13;
+ 					if(dt  >= 5000){
+          //tone(speakerPin, 440, dt);
+					//delay(1000);
+          tone(speakerPin, 440, 10);
+          tone(speakerPin, 440, 10);
+					toned = toned+1;
+					if(toned >= 3) toned = 0;
+					startPress13 = 0;
+					}
+				}
   }
 }
 
