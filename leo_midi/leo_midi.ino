@@ -31,7 +31,7 @@ unsigned long debounceDelay = 50;    //** the debounce time; increase if the out
 // POTENTIOMETERS
 const int NPots = 4; //*** total number of pots (knobs and faders)
 
-const int potPin[NPots] = {A0, A1, A3, A5}; //*** define Analog Pins connected from Pots to Arduino; Leave nothing in the array if 0 pots {}
+const int potPin[NPots] = {A5, A4, A3, A2}; //*** define Analog Pins connected from Pots to Arduino; Leave nothing in the array if 0 pots {}
 int potCState[NPots] = {0}; // Current state of the pot; delete 0 if 0 pots
 int potPState[NPots] = {0}; // Previous state of the pot; delete 0 if 0 pots
 int potVar = 0; // Difference between the current and previous state of the pot
@@ -54,20 +54,32 @@ byte cc = 1; //* Lowest MIDI CC to be used
 
 
 // CAPACCITIVE TOUCH
-const int sendPin = 12;
-const int Ncaps = 5; //*** total number of capacitive touchers
+const int sendPin = A0;
+const int Ncaps = 13; //*** total number of capacitive touchers
 
-const int capPin[Ncaps] = {7,8,9,10,11}; //*** define Digital Pins connected from Touchpads to Arduino; Leave nothing in the array if 0 pots {}
+const int capPin[Ncaps] = {
+0,1,2
+,3,4,5,6,7,8,9,10,11,12
+}; //*** define Digital Pins connected from Touchpads to Arduino; Leave nothing in the array if 0 pots {}
 const CapacitiveSensor capSensors[Ncaps] = { 
   CapacitiveSensor(sendPin, capPin[0]),
   CapacitiveSensor(sendPin, capPin[1]),
   CapacitiveSensor(sendPin, capPin[2]),
   CapacitiveSensor(sendPin, capPin[3]),
-  CapacitiveSensor(sendPin, capPin[4])
-
+  CapacitiveSensor(sendPin, capPin[4]),
+  CapacitiveSensor(sendPin, capPin[5]),
+  CapacitiveSensor(sendPin, capPin[6]),
+  CapacitiveSensor(sendPin, capPin[7]),
+  CapacitiveSensor(sendPin, capPin[8]),
+  CapacitiveSensor(sendPin, capPin[9]),
+  CapacitiveSensor(sendPin, capPin[10]),
+  CapacitiveSensor(sendPin, capPin[11]),
+  CapacitiveSensor(sendPin, capPin[12])
+//*/
 };
 int capCState[Ncaps] = {0}; // Current state of the pad; delete 0 if 0 pads
 int capPState[Ncaps] = {0}; // Previous state of the pad; delete 0 if 0 pads
+unsigned long capSumVal[Ncaps] = {0};
 //int capVar = 0; // Difference between the current and previous state of the pad
 
 //initialize capacitive sense 
@@ -81,9 +93,12 @@ int capPState[Ncaps] = {0}; // Previous state of the pad; delete 0 if 0 pads
 
 
 //speaker
-const int speakerPin = 3;    
-const int speakerNotes[Ncaps] = {440,466,494,523,554 //, 587,622,659,698,740, 784,831,880,932,988
-//, 1047
+const int speakerPin = A1;    
+const int speakerNotes[Ncaps] = {
+440,466,494,523,554 , 
+587,622,659,698,740, 
+784,831,880
+//,932,988, 1047
 //,1109,1175
 //,1245
 };
@@ -92,15 +107,16 @@ int startPress13 = 0;
 
 // SETUP
 void setup() {
-
+  Serial.begin(9600);
   // Baud Rate
   // 31250 for MIDI class compliant | 115200 for Hairless MIDI
 
   // Buttons
   // Initialize buttons with pull up resistors
   for (int i = 0; i < NButtons; i++) {
-    pinMode(buttonPin[i], INPUT_PULLUP);
+    //pinMode(buttonPin[i], INPUT_PULLUP);
   }
+    //pinMode(A0, INPUT_PULLUP);
   // Init capacitive touch pins
   for (int i = 0; i < Ncaps; i++) {
  //   CapacitiveSensor   cs = CapacitiveSensor(sendPin, capPin[i]);        // 10M resistor between pins 4 & 2, pin 2 is sensor pin, add a wire and or foil if desired
@@ -120,7 +136,7 @@ void loop() {
 		connected = false;
 	}
 */
-  buttons();
+  //buttons();
   potentiometers();
   capacitiveButtons();
 
@@ -256,18 +272,63 @@ void controlChange(byte channel, byte control, byte value) {
 
 
 bool trash = false;
+unsigned long cs_vals[Ncaps] = {0};
 void capacitiveButtons(){
   for (int i = 0; i < Ncaps; i++) {
-    long cs_val = capSensors[i].capacitiveSensor(100); //a: Sensor resolution is set to 80
-
-		if (cs_val > 300) { //b: Arbitrary number
+    unsigned long cs_val = capSensors[i].capacitiveSensor(50); //a: Sensor resolution is set to 80
+    long percent = 1;
+    if(cs_vals[i] != 0 && cs_val > 1000){
+      //percent of +dt comparing to previous value
+      if (cs_val > cs_vals[i] *10){
+        percent = 100;
+      }else{
+        percent = cs_val * 100 / (cs_vals[i]);
+      }
+    }
+    if (
+      cs_vals[i] == 0
+      &&
+      cs_val > 1000
+    ){
+      percent = 51;
+    }
+/*
+if(Serial){
+Serial.print(i);
+Serial.print(": ");
+Serial.print(cs_val);
+Serial.print(" / ");
+Serial.print(cs_vals[i]);
+Serial.print(" = ");
+Serial.println(percent);
+if(percent > 50){
+Serial.println(" more ");
+}else{
+Serial.println(" less ");
+}
+delay(500);
+}
+// */
+		if (
+      //cs_val > 100 
+      //percent > 50
+      true
+    ) { //b: Arbitrary number
 			//csSum += cs;
-			capCState[i] += cs_val;  // read pins from arduino
+			//capCState[i] += cs_val;  // read pins from arduino
+			//capSumVal[i] += cs_val;  // read pins from arduino
 			//Serial.println(cs); 
-			if (capCState[i] >= 6000) //c: This value is the threshold, a High value means it takes longer to trigger
+			if (
+        //capSumVal[i] >= 1500
+        percent > 50
+      ) //c: This value is the threshold, a High value means it takes longer to trigger
 			{
+
+				capCState[i] = true;
         if (capPState[i] != capCState[i]) {
 
+//Serial.println(capSumVal[i]);
+//if(Serial){Serial.println('Y');}
          // use if using with ATmega32U4 (micro, pro micro, leonardo...)
           noteOn(midiCh, note + i, 127);  // channel, note, velocity
           MidiUSB.flush();
@@ -280,13 +341,20 @@ void capacitiveButtons(){
 				//Serial.print("Trigger: ");
 				//Serial.println(csSum);
 				//if (csSum > 0) { csSum = 0; } //Reset
-				if(capCState[i] > 0 ) { capCState[i] = 0; } //reset		
+				if(capSumVal[i] > 0 ) { capSumVal[i] = 0; } //reset		
 				capSensors[i].reset_CS_AutoCal(); //Stops readings
 
 			}else{
+				capCState[i] = false;
 
         if (capPState[i] != capCState[i]) {
-
+/*
+Serial.print(i);
+Serial.print(' ');
+Serial.println(cs_val);
+Serial.println(capSumVal[i]);
+*/
+//if(Serial){Serial.println('N');}
          // use if using with ATmega32U4 (micro, pro micro, leonardo...)
           // use if using with ATmega32U4 (micro, pro micro, leonardo...)
           noteOn(midiCh, note + i, 0);  // channel, note, velocity
@@ -296,27 +364,9 @@ void capacitiveButtons(){
         }
       }  
 		} else {
-			 capCState[i] = 0; //Timeout caused by bad readings
+			 capSumVal[i] = 0; //Timeout caused by bad readings
 		}
+    cs_vals[i] = cs_val;
   }//end for
 
-/*
-  long cs12 = cs_6_12.capacitiveSensor(100); //a: Sensor resolution is set to 80
-	if (cs12 > 300) { //b: Arbitrary number
-		csSum12 += cs12;
-		//Serial.println(cs); 
-		if (csSum12 >= 6000) //c: This value is the threshold, a High value means it takes longer to trigger
-		{
-			trash = false;//!trash;
-			if (trash) digitalWrite(13, HIGH);
-			else digitalWrite(13, LOW);
-			//Serial.print("Trigger: ");
-			//Serial.println(csSum);
-			if (csSum12 > 0) { csSum12 = 0; } //Reset
-			cs_6_12.reset_CS_AutoCal(); //Stops readings
-		}
-	} else {
-		csSum12 = 0; //Timeout caused by bad readings
-	}
-*/
 }
