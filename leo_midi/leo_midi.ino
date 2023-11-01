@@ -32,6 +32,7 @@ unsigned long debounceDelay = 50;    //** the debounce time; increase if the out
 const int NPots = 4; //*** total number of pots (knobs and faders)
 
 const int potPin[NPots] = {A5, A4, A3, A2}; //*** define Analog Pins connected from Pots to Arduino; Leave nothing in the array if 0 pots {}
+const int potPinVals[NPots] = {1, 2, 7, 71};
 int potCState[NPots] = {0}; // Current state of the pot; delete 0 if 0 pots
 int potPState[NPots] = {0}; // Previous state of the pot; delete 0 if 0 pots
 int potVar = 0; // Difference between the current and previous state of the pot
@@ -102,7 +103,7 @@ const int speakerNotes[Ncaps] = {
 //,1109,1175
 //,1245
 };
-int toned = 1;
+int toned = 0;
 int startPress13 = 0;
 
 // SETUP
@@ -240,7 +241,7 @@ void potentiometers() {
 
         // Sends  MIDI CC 
         // Use if using with ATmega32U4 (micro, pro micro, leonardo...)
-        controlChange(midiCh, cc + i, midiCState[i]); //  (channel, CC number,  CC value)
+        controlChange(midiCh, potPinVals[i], midiCState[i]); //  (channel, CC number,  CC value)
         MidiUSB.flush();
 
         potPState[i] = potCState[i]; // Stores the current reading of the potentiometer to compare with the next
@@ -332,6 +333,11 @@ delay(500);
          // use if using with ATmega32U4 (micro, pro micro, leonardo...)
           noteOn(midiCh, note + i, 127);  // channel, note, velocity
           MidiUSB.flush();
+
+	          if(toned == 1) 
+              tone(speakerPin, speakerNotes[i], 10);
+	          if(toned == 2) 
+              tone(speakerPin, speakerNotes[i], 500);
 
           capPState[i] = capCState[i];
         }
