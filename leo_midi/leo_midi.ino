@@ -261,11 +261,11 @@ void capacitiveButtons(){
     //if ((millis() - lastDebounceTimeCap[i]) < debounceDelayCap * 10 ) continue;
     if(potCState[3] != debounceDelayCap) debounceDelayCap = potCState[3];;
     //get single cap button reading
-    unsigned long cs_val = capSensors[i].capacitiveSensor(debounceDelayCap); //a: Sensor resolution is set to 80
-    if(cs_val < 10) continue;
+    unsigned long cs_val = capSensors[i].capacitiveSensor(debounceDelayCap * 2); //a: Sensor resolution is set to 80
+    if(cs_val < 5*debounceDelayCap) continue;
     long percent = 1;//init small but non zero
     if(capHigh[i] == 0){
-      capHigh[i] = 2000;
+      capHigh[i] = 1000;
     }
     //calculate score 0 to 127 by mapping current reading val to min < val < max
     int score = map(cs_val, capLow[i], capHigh[i], 0, 127);
