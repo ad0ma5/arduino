@@ -305,10 +305,13 @@ if(startPress13 != 0) extra = 12;
 				noteOn(midiCh, note + i + extra, 127);  // channel, note, velocity
 				MidiUSB.flush();
 if(potCState[2] == 0){
+int times = 1;
+if(startPress13 != 0) times = 2;
+
 					if(toned == 1) 
-						tone(speakerPin, speakerNotes[i], 10);
+						tone(speakerPin, speakerNotes[i]*times, 10);
 					if(toned == 2) 
-						tone(speakerPin, speakerNotes[i], 500);
+						tone(speakerPin, speakerNotes[i]*times, 500);
 }
 				capPState[i] = capCState[i];
 			}
@@ -326,7 +329,9 @@ if(potCState[2] == 0){
 			capCState[i] = false;
 
 			if (capPState[i] != capCState[i]) {
-				noteOn(midiCh, note + i, 0);  // channel, note, velocity
+int extra = 0;
+if(startPress13 != 0) extra = 12;
+				noteOn(midiCh, note + i + extra, 0);  // channel, note, velocity
 				MidiUSB.flush();
 
 				capPState[i] = capCState[i];
