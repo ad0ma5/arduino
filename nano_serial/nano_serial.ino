@@ -10,6 +10,13 @@ int ledPin = 13;
 bool ledState[2] = {LOW, LOW};
 char bufer[20];
 int pinState = 0;
+int distance = 0;
+int oldDistance = 0;
+
+int threshold = 512;
+unsigned long start = 0;
+unsigned long pulseWidth = 0;
+
 void setup() {
   for (int i = 0; i < numButtons; i++) {
     pinMode(buttonPins[i], INPUT_PULLUP);
@@ -19,10 +26,58 @@ void setup() {
   }
   pinMode(ledPin1, OUTPUT);
   pinMode(ledPin2, OUTPUT);
+  pinMode(A7, INPUT);
   //pinMode(A7, OUTPUT);
   Serial.begin(9600);
 }
+void getEcho(){
+  delayMicroseconds(2);
+  digitalWrite(ledPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(ledPin, LOW);
+
+/*
+  digitalWrite(ledPin, LOW);
+  //const unsigned long dur = pulseIn(A7, HIGH);
+  //int distance = dur/29/2;
+  for(int i =0; i < 20; i++){
+    distance = analogRead(A7);
+    if(distance > 500) break;
+  }
+*/
+  distance = getDistance();
+  if(distance != oldDistance){
+    oldDistance = distance;
+  sprintf(bufer,"digital 99 %d", distance);
+  Serial.println(bufer);
+  }
+}
+
+int getDistance() {
+  int val = analogRead(A7);
+  // Wait for rising edge
+  while (analogRead(A7) < threshold);
+  start = micros();
+  // Wait for falling edge
+  while (analogRead(A7) > threshold);
+  pulseWidth = micros() - start;
+  //sprintf(bufer,"digital %d 99", pulseWidth);
+  //Serial.println(bufer);
+  pulseWidth = 5025 - pulseWidth;
+  return pulseWidth;
+}
+int debounceDelayDist = 100;
+int lastDebounceTimesDist= 0;
 void loop() {
+
+  if( analogRead(A6) == 0 ){
+  
+    if ((millis() - lastDebounceTimesDist) > debounceDelayDist) {
+      lastDebounceTimesDist = millis();
+      getEcho();
+    }
+  }
+  else
   for (int i = 0; i < numButtons; i++) {
     if (i < 11){
       ledPin = ledPin1;
