@@ -88,7 +88,7 @@ const int echoPins[] = {3, 5, 7, 9, 16};
 
 // Timing variables
 unsigned long previousMillis = 0;
-const long interval = 30; // Interval for triggering the sensors
+const long interval = 10; // Interval for triggering the sensors
 int currentSensor = 0;
 long distances[5];
 long lastDistances[5]; // Store the last known distances
@@ -127,7 +127,7 @@ void loop() {
 
     // Only print if the distance has changed
     if (distances[currentSensor] != lastDistances[currentSensor]) {
-      //Serial.print("");
+      Serial.print("digital ");
       Serial.print(currentSensor + 1);
       Serial.print(" ");
       Serial.print(distances[currentSensor]);
