@@ -10,6 +10,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 const int buttonPins[] = {2, 9, 4, 5, 6, 7};  // 6 buttons
 const int numButtons = 6;
 
+const int trigPin1 = 11;
+const int echoPin1 = 10;
+
 const int potFreq = A6;
 const int potLen  = A7;
 
@@ -39,6 +42,45 @@ int currentFreq = 0;
 unsigned long lastOLEDUpdate = 0;
 bool prevPlayState = false;
 
+int distance = 0;
+float baseFreq = 0;
+float lfoFreq = 0;
+int lfoLen = 0;
+float lfoFreq1 =0;
+int lfoLen1 = 0;
+
+int getDistance(){
+
+    // Trigger the current sensor
+    digitalWrite(trigPin1, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin1, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin1, LOW);
+
+    // Read the echo pin
+    long duration = pulseIn(echoPin1, HIGH, 20000); // Timeout after 30ms
+
+    // Calculate the distance
+    distance = duration * 0.034 / 2; // Calculate distance
+    return distance;                                     // 
+}
+
+void playButtonPress(){
+    int noteFreq = 0;
+    for (int i = 0; i < numButtons; i++) {
+      if (digitalRead(buttonPins[i]) == LOW) {
+        noteFreq = baseFreq * scale[i] + lfoFreq + lfoFreq1;
+        break;
+      }
+    }
+    if (noteFreq > 0) {
+      tone(pwmOut, noteFreq);
+    } else {
+      noTone(pwmOut);
+    }
+}
+
 void setup() {
   Serial.begin(9600);
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { for (;;) ; }
@@ -50,6 +92,9 @@ void setup() {
     pinMode(buttonPins[i], INPUT_PULLUP);
   }
   pinMode(playButton, INPUT_PULLUP);
+
+  pinMode(trigPin1, OUTPUT);
+  pinMode(echoPin1, INPUT);
 
   display.setCursor(0, 0);
   display.println(F("Synth Ready"));
@@ -64,14 +109,16 @@ void loop() {
   // --- Read pots & LDRs ---
   int potFreqRaw = analogRead(potFreq);
   int potLenRaw  = analogRead(potLen);
-  float baseFreq = map(potFreqRaw, 0, 1023, 100, 2000);
+  baseFreq = map(potFreqRaw, 0, 1023, 100, 2000);
 
-  float lfoFreq = map(analogRead(ldr1), 0, 1023, -150, 150);
+  lfoFreq = map(analogRead(ldr1), 0, 1023, -150, 150);
   int lfoLen = map(analogRead(ldr2), 0, 1023, -300, 300);
   float lfoFreq1 = map(analogRead(ldr3), 0, 1023, -150, 150);
   int lfoLen1 = map(analogRead(ldr4), 0, 1023, -300, 300);
 
   noteInterval = constrain(potLenRaw + lfoLen + lfoLen1, 10, 2000);
+
+  int dist = getDistance();
 
   if (isPlaying) {
     // --- Entered Play Mode ---
@@ -97,26 +144,18 @@ void loop() {
           if (note > 0) {
             currentFreq = baseFreq * scale[note - 1] + lfoFreq + lfoFreq1;
             tone(pwmOut, currentFreq);
+            delay(dist);
           }
         } else {
           noTone(pwmOut);
           playIndex = (playIndex + 1) % noteCount;
+
+          delay(dist);
         }
       }
     } else {
       // --- Live mode if no sequence ---
-      int noteFreq = 0;
-      for (int i = 0; i < numButtons; i++) {
-        if (digitalRead(buttonPins[i]) == LOW) {
-          noteFreq = baseFreq * scale[i] + lfoFreq + lfoFreq1;
-          break;
-        }
-      }
-      if (noteFreq > 0) {
-        tone(pwmOut, noteFreq);
-      } else {
-        noTone(pwmOut);
-      }
+      playButtonPress();
     }
   } else {
     // --- Stop playback ---
@@ -145,6 +184,8 @@ void loop() {
         delay(200); // debounce
       }
     }
+    playButtonPress();
+    delay(500);
 
     // --- OLED update every 500ms ---
     if (now - lastOLEDUpdate >= 500) {
@@ -169,6 +210,9 @@ void loop() {
         else display.print("-");
         display.print(" ");
       }
+
+      display.setCursor(0, 30);
+      display.print("Dist:"); display.println(dist);
 
       display.setCursor(0, 40);
       display.print("Freq:"); display.println((int)baseFreq);
