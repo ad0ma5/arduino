@@ -15,6 +15,8 @@ const int potLen  = A7;
 
 const int ldr1 = A0;
 const int ldr2 = A1;
+const int ldr3 = A2;
+const int ldr4 = A3;
 
 const int pwmOut = 3;
 const int playButton = 8;
@@ -64,10 +66,12 @@ void loop() {
   int potLenRaw  = analogRead(potLen);
   float baseFreq = map(potFreqRaw, 0, 1023, 100, 2000);
 
-  float lfoFreq = map(analogRead(ldr1), 0, 1023, -50, 50);
-  int lfoLen = map(analogRead(ldr2), 0, 1023, -200, 200);
+  float lfoFreq = map(analogRead(ldr1), 0, 1023, -150, 150);
+  int lfoLen = map(analogRead(ldr2), 0, 1023, -300, 300);
+  float lfoFreq1 = map(analogRead(ldr3), 0, 1023, -150, 150);
+  int lfoLen1 = map(analogRead(ldr4), 0, 1023, -300, 300);
 
-  noteInterval = constrain(potLenRaw + lfoLen, 10, 2000);
+  noteInterval = constrain(potLenRaw + lfoLen + lfoLen1, 10, 2000);
 
   if (isPlaying) {
     // --- Entered Play Mode ---
@@ -91,7 +95,7 @@ void loop() {
         if (noteOn) {
           int note = recordedNotes[playIndex];
           if (note > 0) {
-            currentFreq = baseFreq * scale[note - 1] + lfoFreq;
+            currentFreq = baseFreq * scale[note - 1] + lfoFreq + lfoFreq1;
             tone(pwmOut, currentFreq);
           }
         } else {
@@ -104,7 +108,7 @@ void loop() {
       int noteFreq = 0;
       for (int i = 0; i < numButtons; i++) {
         if (digitalRead(buttonPins[i]) == LOW) {
-          noteFreq = baseFreq * scale[i] + lfoFreq;
+          noteFreq = baseFreq * scale[i] + lfoFreq + lfoFreq1;
           break;
         }
       }

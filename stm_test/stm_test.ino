@@ -1,12 +1,12 @@
+// Blink_STM32.ino
 void setup() {
-  // initialize digital pin LED_BUILTIN as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(PC13, OUTPUT); // PC13 is the user LED on many Blue Pill boards
 }
 
-// the loop function runs over and over again forever
 void loop() {
-  digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-  delay(1000);                      // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-  delay(1000);                      // wait for a second
+  digitalWrite(PC13, LOW);   // LED on (on Blue Pill PC13 is typically active-low)
+  delay(500);
+  digitalWrite(PC13, HIGH);  // LED off
+  delay(500);
 }
+

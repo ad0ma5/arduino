@@ -1,0 +1,106 @@
+#include <Arduino.h>
+
+#define LATCH_DIO 4
+#define CLK_DIO   7
+#define DATA_DIO  8
+
+#define Pot1 A0
+const int buzzerPin = 3;
+
+const int buttonPins[3] = {A1, A2, A3};  // Buttons on analog pins
+const int ledPins[3]    = {10, 11, 12}; // LEDs
+
+// Debounce
+const unsigned long DEBOUNCE_MS = 50;
+unsigned long lastDebounceTime[3] = {0,0,0};
+bool buttonState[3] = {false,false,false};     // stable state
+bool lastButtonState[3] = {false,false,false}; // for change detection
+
+int PotValue = 0;
+int lastPotValue = -1;
+
+// Segment byte maps for numbers 0–9
+const byte SEGMENT_MAP[] = {
+  0xC0,0xF9,0xA4,0xB0,0x99,0x92,0x82,0xF8,0x80,0x90
+};
+// Byte maps to select digit 1 to 4
+const byte SEGMENT_SELECT[] = {0xF1,0xF2,0xF4,0xF8};
+
+/* Write a decimal number between 0 and 9 to one of the 4 digits
+   dot = true → turn on decimal point */
+void WriteNumberToSegment(byte Segment, byte Value, bool dot = false)
+{
+  byte segVal = SEGMENT_MAP[Value];
+  if (dot) {
+    segVal &= 0x7F; // clear bit 0 to light the dot
+  }
+
+  digitalWrite(LATCH_DIO, LOW);
+  shiftOut(DATA_DIO, CLK_DIO, MSBFIRST, segVal);
+  shiftOut(DATA_DIO, CLK_DIO, MSBFIRST, SEGMENT_SELECT[Segment]);
+  digitalWrite(LATCH_DIO, HIGH);
+}
+void setup() {
+  pinMode(LATCH_DIO, OUTPUT);
+  pinMode(CLK_DIO, OUTPUT);
+  pinMode(DATA_DIO, OUTPUT);
+
+  for (int i = 0; i < 3; i++) {
+    pinMode(ledPins[i], OUTPUT);
+    digitalWrite(ledPins[i], LOW); // LEDs off
+  }
+
+  // A1–A3 as analog button inputs (need resistors or shield wiring)
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  // --- Read pot ---
+  int newPot = analogRead(Pot1);
+  int freq = map(newPot, 0, 1023, 100, 2000); // audible range
+
+  bool anyPrr = false;
+  // --- Read buttons with debounce ---
+  for (int i = 0; i < 3; i++) {
+    int raw = analogRead(buttonPins[i]);
+    bool pressed = (raw > 0); // threshold for shield buttons
+
+    if(pressed) anyPrr = true;
+
+    if (pressed != lastButtonState[i]) {
+      lastDebounceTime[i] = now;
+      lastButtonState[i] = pressed;
+    }
+
+    if ((now - lastDebounceTime[i]) > DEBOUNCE_MS) {
+      if (buttonState[i] != pressed) {
+        buttonState[i] = pressed;
+
+        // LED reflects state
+        digitalWrite(ledPins[i], pressed ? HIGH : LOW);
+      }
+    }
+  }
+
+  // --- Tone only if *any* button pressed ---
+  bool anyPressed = buttonState[0] || buttonState[1] || buttonState[2];
+  if (anyPressed) {
+    //tone(buzzerPin, freq);
+  } else {
+    noTone(buzzerPin);
+  }
+
+  // --- Update screen only if something changed ---
+  if (newPot/10 != lastPotValue/10 || anyPressed != (lastButtonState[0] || lastButtonState[1] || lastButtonState[2])) {
+    lastPotValue = newPot;
+
+    // Example: display pot value across 4 digits
+    WriteNumberToSegment(0 , newPot / 1000);
+    WriteNumberToSegment(1 , (newPot / 100) % 10);
+    WriteNumberToSegment(2 , (newPot / 10) % 10);
+    WriteNumberToSegment(3 , newPot % 10);
+  }
+}
+
+
