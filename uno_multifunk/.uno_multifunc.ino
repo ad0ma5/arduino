@@ -1,4 +1,3 @@
-
 /* Define shift register pins used for seven segment display */
 #define LATCH_DIO 4
 #define CLK_DIO 7

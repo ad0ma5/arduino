@@ -1,0 +1,189 @@
+// Auduino Synth — Multifunction Shield (corrected pins)
+// Buttons: A1 (mode), A2 (inc), A3 (dec)
+// Pot: A0
+// Buzzer (PWM audio): D3
+// LEDs: 13,12,11 show mode (binary), 10 indicates Pitch (ON) / Decay (OFF)
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+// -------------------------------
+// Synthesis state
+// -------------------------------
+uint16_t syncPhaseAcc = 0;
+uint16_t syncPhaseInc = 300;
+uint16_t grainPhaseAcc = 0;
+uint16_t grainPhaseInc = 400;
+uint16_t grainAmp = 0;
+uint8_t  grainDecay = 4;
+uint16_t grain2PhaseAcc = 0;
+uint16_t grain2PhaseInc = 600;
+uint16_t grain2Amp = 0;
+uint8_t  grain2Decay = 6;
+
+// Parameters (editable by buttons)
+int param_grain1Pitch = 400;
+int param_grain2Pitch = 600;
+int param_grain1Decay = 4;
+int param_grain2Decay = 6;
+int param_syncFreq    = 300;
+
+// -------------------------------
+// Hardware pins
+// -------------------------------
+#define BUTTON_MODE A1   // cycle mode
+#define BUTTON_INC  A2   // increase value
+#define BUTTON_DEC  A3   // decrease value
+#define POT_PIN     A0   // potentiometer (user said A0)
+
+#define LED1 13
+#define LED2 12
+#define LED3 11
+#define LED4 10
+
+#define PWM_PIN 3       // buzzer / audio out (OC2B)
+
+// -------------------------------
+// Mode system
+// -------------------------------
+int mode = 0; // 0..4
+
+// Last button states for edge detection (INPUT_PULLUP => HIGH when released)
+int lastModeState = HIGH;
+int lastIncState = HIGH;
+int lastDecState = HIGH;
+
+// -------------------------------
+// PWM / ISR
+// -------------------------------
+#define PWM_VALUE OCR2B
+#define PWM_INTERRUPT TIMER2_OVF_vect
+
+ISR(PWM_INTERRUPT) {
+  // sync clock
+  syncPhaseAcc += syncPhaseInc;
+  if (syncPhaseAcc < syncPhaseInc) {
+    // new cycle -> reset grains
+    grainPhaseAcc = 0;
+    grainAmp = 0x7fff;
+    grain2PhaseAcc = 0;
+    grain2Amp = 0x7fff;
+  }
+
+  // advance grains
+  grainPhaseAcc  += grainPhaseInc;
+  grain2PhaseAcc += grain2PhaseInc;
+
+  // simple waveform mix (lo-fi)
+  int16_t sample = ((grainPhaseAcc >> 7) * (uint16_t)grainAmp >> 16);
+  sample += ((grain2PhaseAcc >> 7) * (uint16_t)grain2Amp >> 16);
+
+  // output via PWM (centered around 128)
+  PWM_VALUE = (sample >> 8) + 128;
+
+  // exponential-ish decay
+  grainAmp  -= (grainAmp  >> grainDecay);
+  grain2Amp -= (grain2Amp >> grain2Decay);
+}
+
+void audioOn() {
+  pinMode(PWM_PIN, OUTPUT);
+  // Timer2: enable OC2B PWM and overflow interrupt
+  TCCR2A = _BV(COM2B1) | _BV(WGM20); // Phase-correct PWM, OC2B on compare
+  TCCR2B = _BV(CS20);                // no prescaling
+  TIMSK2 = _BV(TOIE2);               // overflow interrupt enable
+}
+
+// -------------------------------
+// LEDs helper
+// -------------------------------
+void updateLEDs() {
+  digitalWrite(LED1, mode & 0x01);
+  digitalWrite(LED2, (mode >> 1) & 0x01);
+  digitalWrite(LED3, (mode >> 2) & 0x01);
+  // LED4 ON => pitch mode, OFF => decay mode
+  if (mode == 0 || mode == 1 || mode == 4) digitalWrite(LED4, HIGH);
+  else digitalWrite(LED4, LOW);
+}
+
+// -------------------------------
+// Setup
+// -------------------------------
+void setup() {
+  // buttons (analog pins used as digital inputs with internal pullups)
+  pinMode(BUTTON_MODE, INPUT_PULLUP);
+  pinMode(BUTTON_INC, INPUT_PULLUP);
+  pinMode(BUTTON_DEC, INPUT_PULLUP);
+
+  // LEDs
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(LED4, OUTPUT);
+
+  updateLEDs();
+  audioOn();
+}
+
+// -------------------------------
+// Main loop
+// -------------------------------
+void loop() {
+  // read buttons (active LOW because of INPUT_PULLUP)
+  int m = digitalRead(BUTTON_MODE);
+  if (m == LOW && lastModeState == HIGH) {
+    mode = (mode + 1) % 5;
+    updateLEDs();
+    delay(200); // simple debounce
+  }
+  lastModeState = m;
+
+  int in = digitalRead(BUTTON_INC);
+  if (in == LOW && lastIncState == HIGH) {
+    // increment parameter depending on mode
+    switch(mode) {
+      case 0: param_grain1Pitch += 10; break;
+      case 1: param_grain2Pitch += 10; break;
+      case 2: param_grain1Decay++;     break;
+      case 3: param_grain2Decay++;     break;
+      case 4: param_syncFreq += 10;    break;
+    }
+    delay(120);
+  }
+  lastIncState = in;
+
+  int d = digitalRead(BUTTON_DEC);
+  if (d == LOW && lastDecState == HIGH) {
+    switch(mode) {
+      case 0: param_grain1Pitch -= 10; break;
+      case 1: param_grain2Pitch -= 10; break;
+      case 2: param_grain1Decay--;     break;
+      case 3: param_grain2Decay--;     break;
+      case 4: param_syncFreq -= 10;    break;
+    }
+    delay(120);
+  }
+  lastDecState = d;
+
+  // read potentiometer on A0 and use as a pitch offset applied to both grains
+  int pot = analogRead(POT_PIN); // 0..1023
+  int potOffset = map(pot, 0, 1023, -200, 200);
+
+  // clamp parameters
+  if (param_grain1Pitch < 10) param_grain1Pitch = 10;
+  if (param_grain2Pitch < 10) param_grain2Pitch = 10;
+  if (param_syncFreq < 10)    param_syncFreq = 10;
+  if (param_grain1Decay < 1)  param_grain1Decay = 1;
+  if (param_grain2Decay < 1)  param_grain2Decay = 1;
+
+  // apply pot offset to pitch increments
+  syncPhaseInc   = param_syncFreq;
+  grainPhaseInc  = (uint16_t)max(10, param_grain1Pitch + potOffset);
+  grain2PhaseInc = (uint16_t)max(10, param_grain2Pitch + potOffset);
+  grainDecay     = (uint8_t)min(20, param_grain1Decay);
+  grain2Decay    = (uint8_t)min(20, param_grain2Decay);
+
+  // small sleep to reduce CPU churn (ISR runs regardless)
+  delay(20);
+}
+
