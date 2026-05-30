@@ -24,7 +24,7 @@ int buttonPState[NButtons] = {};        // stores the button previous value
       
 // debounce
 unsigned long lastDebounceTime[NButtons] = {0};  // the last time the output pin was toggled
-unsigned long debounceDelay = 50;    //** the debounce time; increase if the output flickers
+unsigned long debounceDelay = 10;    //** the debounce time; increase if the output flickers
 
 
 // POTENTIOMETERS
@@ -261,7 +261,7 @@ void capacitiveButtons(){
     //if ((millis() - lastDebounceTimeCap[i]) < debounceDelayCap * 10 ) continue;
     if(potCState[3] != debounceDelayCap) debounceDelayCap = potCState[3];;
     //get single cap button reading
-    unsigned long cs_val = capSensors[i].capacitiveSensor(debounceDelayCap * 2); //a: Sensor resolution is set to 80
+    unsigned long cs_val = capSensors[i].capacitiveSensor(debounceDelayCap); //a: Sensor resolution is set to 80
     if(cs_val < 5*debounceDelayCap) continue;
     long percent = 1;//init small but non zero
     if(capHigh[i] == 0){
