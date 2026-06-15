@@ -1,20 +1,34 @@
-#include "CapacitiveSensor.h"
+#include <Wire.h>
+#include <CapacitiveSensor.h>
 
+#define I2C_ADDRESS 0x10
 
+struct ControllerData
+{
+  uint16_t pots[4];
+  uint16_t touchBits;
+};
 
-// CAPACCITIVE TOUCH
+volatile ControllerData controllerData;
+
 const int sendPin = A1;
-const int Ncaps = 13; //*** total number of capacitive touchers
-const int ledPin = 13;
+// Pot pins
+const uint8_t potPins[4] =
+{
+A7, A6, A0, A2
+};
 
+const int Ncaps = 13; //*** total number of capacitive touchers
 const int capPin[Ncaps] = {
-  0,2,1,3,4,5,6,7,8,9,10,11,12
-}; //*** define Digital Pins connected from Touchpads to Arduino; Leave nothing in the array if 0 pots {}
-   //initialize capacitive sense 
-const CapacitiveSensor capSensors[Ncaps] = { 
+  1,2,0,3,4,5,6,7,8,9,10,11,12
+}; 
+// Touch sensors
+//CapacitiveSensor capSensors[Ncaps] = {};
+/*
+{
   CapacitiveSensor(sendPin, capPin[0]),
-  CapacitiveSensor(sendPin, capPin[2]),
   CapacitiveSensor(sendPin, capPin[1]),
+  CapacitiveSensor(sendPin, capPin[2]),
   CapacitiveSensor(sendPin, capPin[3]),
   CapacitiveSensor(sendPin, capPin[4]),
   CapacitiveSensor(sendPin, capPin[5]),
@@ -25,122 +39,207 @@ const CapacitiveSensor capSensors[Ncaps] = {
   CapacitiveSensor(sendPin, capPin[10]),
   CapacitiveSensor(sendPin, capPin[11]),
   CapacitiveSensor(sendPin, capPin[12])
-    //*/
 };
-int capCState[Ncaps] = {0}; // Current state of the pad; delete 0 if 0 pads
-int capPState[Ncaps] = {0}; // Previous state of the pad; delete 0 if 0 pads
-unsigned long capLow[Ncaps] = {0};
-unsigned long capHigh[Ncaps] = {0};
-unsigned long cs_vals[Ncaps] = {0};
-// debounce
-unsigned long lastDebounceTimeCap[Ncaps] = {0};  // the last time the output pin was toggled
-unsigned long debounceDelayCap = 10;    //** the debounce time; increase if the output flickers
+*/
+long baseline[Ncaps];
+long threshold[Ncaps];
 
-// SETUP
-void setup() {
-  //Serial.begin(9600);
-  // Baud Rate
-  // 31250 for MIDI class compliant | 115200 for Hairless MIDI
-  pinMode(ledPin, OUTPUT);
-  // Init capacitive touch pins
+void requestEvent()
+{
+  Wire.write(
+    (uint8_t *)&controllerData,
+    sizeof(controllerData)
+  );
+}
+
+void setup()
+{
+  //pinMode(13, OUTPUT);
+  Wire.begin(I2C_ADDRESS);
+  Wire.onRequest(requestEvent);
+
+  memset((void *)&controllerData, 0, sizeof(controllerData));
+/*
+  // Disable auto calibration
   for (int i = 0; i < Ncaps; i++) {
-    capSensors[i].set_CS_AutocaL_Millis(0xFFFFFFFF);  //Calibrate the sensor... pinMode(led, OUTPUT);
+    capSensors[i].set_CS_AutocaL_Millis(0xFFFFFFFF);  //Calibrate the sensor...  
   }
 
-}
-////
-// LOOP
-void loop() {
-  capacitiveButtons();
-}
+  delay(1000);
 
+  // Initial calibration
+  for(int i = 0; i < Ncaps; i++)
+  {
+    long sum = 0;
 
-void capacitiveButtons(){
-  for (int i = 0; i < Ncaps; i++) {
-    //if ((millis() - lastDebounceTimeCap[i]) < debounceDelayCap * 10 ) continue;
-    //if(potCState[3] != debounceDelayCap) debounceDelayCap = potCState[3];;
-    //get single cap button reading
-    unsigned long cs_val = capSensors[i].capacitiveSensor(debounceDelayCap); //a: Sensor resolution is set to 80
-    if(cs_val < 5*debounceDelayCap) continue;
-    digitalWrite(ledPin, LOW);
-    long percent = 1;//init small but non zero
-    if(capHigh[i] == 0){
-      capHigh[i] = 1000;
-    }
-    //calculate score 0 to 127 by mapping current reading val to min < val < max
-    int score = map(cs_val, capLow[i], capHigh[i], 0, 127);
-
-    /*
-       if(cs_vals[i] != 0 && cs_val > 1000){
-    //percent of +dt comparing to previous value
-    if (cs_val > cs_vals[i] *10){
-    percent = 100;
-    }else{
-    percent = cs_val * 100 / (cs_vals[i]);
-    }
-    }
-    if (
-    cs_vals[i] == 0
-    &&
-    cs_val > 1000
-    ){
-    percent = 51;
-    }
-    */
-    if (
-        !capCState[i]
-        &&
-        //percent > 50
-        score > 50
-        //&&
-       ) //c: This value is the threshold, a High value means it takes longer to trigger
+    for(int j = 0; j < 10; j++)
     {
-      capCState[i] = true;
-      if (capPState[i] != capCState[i]) {
+      sum += capSensors[i].capacitiveSensor(5);
+      delay(5);
+    }
 
-        digitalWrite(ledPin, HIGH);
-        lastDebounceTimeCap[i] = millis();
-        // use if using with ATmega32U4 (micro, pro micro, leonardo...)
-        int extra = 0;
-        //if(startPress13 != 0) extra = 12;
-        //noteOn(midiCh, note + i + extra, 127);  // channel, note, velocity
-        //MidiUSB.flush();
-        //if(potCState[2] == 0){
-          //int times = 1;
-          //if(startPress13 != 0) times = 2;
+    baseline[i] = sum / 10;
 
-          //if(toned == 1) 
-            //tone(speakerPin, speakerNotes[i]*times, 10);
-          //if(toned == 2) 
-            //tone(speakerPin, speakerNotes[i]*times, 500);
-        //}
-        capPState[i] = capCState[i];
-      }
-      capSensors[i].reset_CS_AutoCal(); //Stops readings
-                                        //new hight average
-                                        //if(90 < score < 110)
-                                        //capHigh[i] = capHigh[i] + cs_val / 2;
+    // Adjust if needed
+    threshold[i] = baseline[i] + 80;
+  }
+*/
+  // no more caps
+  for(int pin=0; pin<=12; pin++)
+  {
+      pinMode(pin, INPUT_PULLUP);
+  }
 
-    }else 
-      //if(
-      //capCState[i] && score < 25 
-      //)
-      //if(percent < 0 && capCState[i])i
-    {
-      capCState[i] = false;
-
-      if (capPState[i] != capCState[i]) {
-        int extra = 0;
-        //if(startPress13 != 0) extra = 12;
-        //noteOn(midiCh, note + i + extra, 0);  // channel, note, velocity
-        //MidiUSB.flush();
-
-        capPState[i] = capCState[i];
-      }
-      //if(-10 < score < 10)
-      //capLow[i] = capLow[i] + cs_val / 2;
-    }  
-    cs_vals[i] = cs_val;
-  }//end for
-
+  pinMode(A1, OUTPUT);
+  digitalWrite(A1, LOW);
 }
+
+void loop()
+{
+  //digitalWrite(13, HIGH);
+  readPots();
+  //readTouches();
+  readGroundTouches();
+  //digitalWrite(13, LOW);
+  //delay(50);
+}
+
+void readPots()
+{
+  for(int i = 0; i < 4; i++)
+  {
+    uint16_t v = analogRead(potPins[i]);
+
+    // Simple jitter suppression
+    if(abs((int)v - (int)controllerData.pots[i]) > 2)
+    {
+      controllerData.pots[i] = v;
+    }
+  }
+}
+void readGroundTouches()
+{
+    uint16_t bits = 0;
+
+    // D0-D7 -> bits 0-7
+    bits |= (~PIND) & 0xFF;
+
+    // D8-D12 -> bits 8-12
+    bits |= (((~PINB) & 0x1F) << 8);
+
+    controllerData.touchBits = bits;
+}
+/*
+void readTouches()
+{
+  uint16_t bits = 0;
+
+  for(int i = 0; i < Ncaps; i++)
+  {
+    long value = capSensors[i].capacitiveSensorRaw(1);//capacitiveSensor(5);
+
+
+    if(value > threshold[i])
+    {
+      bits |= (1 << i);
+    }
+  }
+
+  controllerData.touchBits = bits;
+}
+*/
+/////////////////////////
+/*
+#include <Wire.h>
+
+#define DEBUG 0
+
+const byte I2C_ADDR = 0x10;
+
+struct ControllerData
+{
+  uint16_t pots[4];
+  uint16_t touchBits;
+  uint8_t changed;
+};
+
+volatile ControllerData data;
+
+const int potPin[NPots] = {A7, A6, A0, A2};                                            
+const int capPin[Ncaps] = {
+  1,2,0,3,4,5,6,7,8,9,10,11,12
+}; 
+
+#if DEBUG
+#define DBG(x) Serial.print(x)
+#define DBGLN(x) Serial.println(x)
+#else
+#define DBG(x)
+#define DBGLN(x)
+#endif
+
+void requestEvent()
+{
+  Wire.write((uint8_t*)&data, sizeof(data));
+
+  data.changed = 0;
+}
+
+void setup()
+{
+#if DEBUG
+  Serial.begin(115200);
+#endif
+
+  Wire.begin(I2C_ADDR);
+  Wire.onRequest(requestEvent);
+
+  memset((void*)&data, 0, sizeof(data));
+}
+void loop()
+{
+  bool anyChange = false;
+
+  // Read pots
+  for(int i=0;i<4;i++)
+  {
+    uint16_t newValue = analogRead(potPin[i]);
+
+    // Ignore tiny jitter
+    if(abs((int)newValue - (int)data.pots[i]) > 3)
+    {
+      data.pots[i] = newValue;
+      anyChange = true;
+    }
+  }
+
+  // Example touch reads
+  uint16_t newTouchBits = 0;
+
+  for(int i=0;i<12;i++)
+  {
+    bool touched = digitalRead(capPin[i]);
+
+    if(touched)
+      newTouchBits |= (1 << i);
+  }
+
+  if(newTouchBits != data.touchBits)
+  {
+    data.touchBits = newTouchBits;
+    anyChange = true;
+  }
+
+  if(anyChange)
+  {
+    data.changed = 1;
+
+#if DEBUG
+    DBG("Touch bits: ");
+    DBGLN(data.touchBits);
+#endif
+  }
+
+  delay(5);
+}
+*/
