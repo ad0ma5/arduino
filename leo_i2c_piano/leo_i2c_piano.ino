@@ -16,6 +16,10 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
+#define TRIG_PIN 12
+#define ECHO_PIN 13 
+#define ECHO_TIMEOUT 20 
+
 Adafruit_SSD1306 display(
   SCREEN_WIDTH,
   SCREEN_HEIGHT,
@@ -67,6 +71,8 @@ byte note = 60; //* Lowest note to be used; 36 = C2; 60 = Middle C
 byte cc = 1; //* Lowest MIDI CC to be used
 uint8_t cc_val = 0;
 uint16_t pot_val = 0;
+int trigPin1 = 12;
+int echoPin1 = 13;
 //
 // Arduino MIDI functions MIDIUSB Library
 void noteOn(byte channel, byte pitch, byte velocity) {
@@ -83,6 +89,10 @@ void controlChange(byte channel, byte control, byte value) {
   midiEventPacket_t event = {0x0B, 0xB0 | channel, control, value};
   MidiUSB.sendMIDI(event);
 }
+float current_distance = 1;
+int distance = 0;
+int cdist = 0;
+int cdistold = 0;
 
 /////////////////////////////////////////////////////////////////////
 void setup()
@@ -110,6 +120,8 @@ void setup()
     
     pinMode(buttonPins[i], INPUT_PULLUP);
   }
+  pinMode(trigPin1, OUTPUT);
+  pinMode(echoPin1, INPUT);
 }
 /////////////////////////////////////////////////////////////////////
 bool readButtons()
@@ -121,6 +133,9 @@ bool readButtons()
     buttonVals[i] = digitalRead(buttonPins[i]);
       if(buttonValsOld[i] != buttonVals[i])
       {
+        //if(buttonVals[i] == HIGH)
+          sendMIDI(10, i+1); 
+
         changed = true;
       }
   }
@@ -137,59 +152,12 @@ void printLCD()
     display.print("midi controlieour loading...");
     display.display();
 
-    delay(1000);
+    delay(5000);
     display.clearDisplay();
     //display.setTextSize(1);
     //display.setTextColor(SSD1306_WHITE);
 }
 
-void printTouches_buggy()
-{ 
-    //display.setCursor(0, 10);
-    for(int ii=0;ii<13;ii++)
-    {
-      int i = actualNotes[ii];
-      if(controllerData.touchBits & (1 << i))
-      {
-        //sendMIDI(11, i); 
-        if(current_note == 13){
-          noteOn(midiCh, note+ii, 127);
-          current_note = ii;
-          //display.print(" ");
-          //break;
-        }else{
-
-          noteOff(midiCh, note+current_note, 127);
-          noteOn(midiCh, note+ii, 127);
-          current_note = ii;
-        }
-          display.setCursor(0, 0);
-          display.print("T: ");
-
-
-          display.print(i);
-          display.print("=");
-          display.print(ii);
-      }else{
-        if(current_note == ii)
-        {
-          //noteOn(midiCh, note+ii, 0);
-          noteOff(midiCh, note+ii, 127);
-        }
-      }
-    }
-    display.setCursor(40, 0);
-    display.print(current_note);
-    display.print(":");
-    for(int i=0;i<6;i++)
-    {
-
-        display.print(buttonVals[i]);
-        //display.print(" ");
-    }
-
-
-}
 void printTouches()
 {
     bool foundNote = false;
@@ -257,6 +225,39 @@ void sendMIDI(uint8_t cc_no, uint8_t cc_val){
         controlChange(midiCh, cc_no, cc_val); //  (channel, CC number,  CC value)
         MidiUSB.flush();
 }
+
+float ultrasonicMeasure() {
+  // generate 10-microsecond pulse to TRIG pin
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  // measure duration of pulse from ECHO pin
+  //float duration_us = pulseIn(ECHO_PIN, HIGH, ECHO_TIMEOUT);
+  float duration_us = pulseIn(ECHO_PIN, HIGH );
+
+  // calculate the distance
+  float distance_cm = 0.017 * duration_us;
+
+  return distance_cm;
+}
+int getDistance(){
+
+    // Trigger the current sensor
+    digitalWrite(trigPin1, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin1, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin1, LOW);
+
+    // Read the echo pin
+    long duration = pulseIn(echoPin1, HIGH, 20000); // Timeout after 30ms
+
+    // Calculate the distance
+    distance = duration * 0.034 / 2; // Calculate distance
+    return distance;                                     // 
+}
+
 void loop()
 {
   //delay(100);
@@ -281,6 +282,18 @@ void loop()
     }
     if(readPots() != 0){
       changed = true;
+    }
+    //current_distance = ultrasonicMeasure();
+    //if(current_distance > 0){
+    //  changed = true;
+    //}
+    cdist = getDistance();
+    if(cdist != cdistold){
+        changed = true;
+        cdistold = cdist;
+        cc_val = map(cdist, 0, 165, 0, 127);
+        sendMIDI(11, cc_val); 
+
     }
     for(int i=0;i<4;i++)
     {
@@ -318,6 +331,8 @@ void loop()
         display.print(pots[i]);
         display.print(" ");
       }
+        display.print("D:");
+      display.print(cdist);
       display.display();
 /*
       Serial.print(" TouchBits: ");
